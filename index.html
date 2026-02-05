@@ -1,0 +1,2290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content, viewport-fit=cover">
+    <title>Daju</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/12.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.8.0/firebase-database-compat.js"></script>
+
+    <style>
+        /* --- 1. GLOBAL STYLES & FIXES --- */
+        ::-webkit-scrollbar { display: none; }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            margin: 0; padding: 0; 
+            width: 100%; height: 100%;
+            position: fixed; 
+            font-family: 'Times New Roman', Times, serif;
+            background: #000; 
+            overflow: hidden; 
+            color: #fff; 
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: none;
+            -webkit-text-size-adjust: 100%;
+            scrollbar-width: none; 
+            -ms-overflow-style: none;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* --- OPTIMIZED NEON BACKGROUND - GPU accelerated --- */
+        .bg-neon {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: -2;
+            background: linear-gradient(-45deg, #1a0029, #001a29, #29001a, #000000);
+            background-size: 400% 400%;
+            animation: neonGradient 12s ease infinite;
+            will-change: background-position;
+            transform: translateZ(0);
+            backface-visibility: hidden;
+        }
+
+        @keyframes neonGradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .bg-neon.paused {
+            animation-play-state: paused;
+        }
+
+        button, input, .square, .piece, .chat-bubble-btn {
+            touch-action: manipulation;
+        }
+
+        /* --- 2. LAYOUT WRAPPERS --- */
+        .scroll-wrapper {
+            width: 100%; height: 100%;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+            box-sizing: border-box; overflow-x: hidden;
+            scrollbar-width: none; -ms-overflow-style: none;
+            contain: layout style;
+        }
+
+        .container-wrapper { 
+            position: relative; width: 100%; height: 100%;
+            max-width: 600px; padding: 0;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center; text-align: center;
+            contain: layout style;
+        }
+
+        #page-login, #page-selection, #page-host, #page-join, #page-game, #page-winner {
+            width: 100%; height: 100%;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            contain: layout style paint;
+        }
+        
+        h2 { 
+            font-weight: 700; font-size: clamp(28px, 8vh, 48px); 
+            letter-spacing: 2px; text-transform: uppercase; 
+            text-shadow: 0 0 10px #03e9f4, 0 0 20px #ff00cc; 
+            margin: 0 0 2vh 0; 
+        }
+
+        #page-login h2 { margin-top: -5vh; margin-bottom: 4vh; }
+        h3 { font-size: clamp(20px, 5vh, 28px); margin-bottom: 3vh; font-weight: normal; }
+        p { color: rgba(255, 255, 255, 0.8); font-size: clamp(14px, 4vw, 18px); margin: 1vh 0; }
+
+        /* --- 3. INPUTS & BUTTONS --- */
+        .input-group { position: relative; margin-bottom: 4vh; width: 80%; max-width: 300px; margin-left: auto; margin-right: auto; }
+        .input-group input { width: 100%; padding: 1.5vh 0; font-size: 20px; color: #fff; border: none; border-bottom: 2px solid rgba(255, 255, 255, 0.5); background: transparent; outline: none; text-align: center; font-family: 'Times New Roman', Times, serif; border-radius: 0; }
+        .uppercase-input { text-transform: uppercase; }
+        .input-group label { position: absolute; top: 0; left: 0; width: 100%; padding: 1.5vh 0; font-size: 20px; color: rgba(255, 255, 255, 0.7); pointer-events: none; transition: .5s; text-align: center; }
+        .input-group input:focus ~ label, .input-group input:valid ~ label { top: -25px; color: #03e9f4; font-size: 14px; text-shadow: 0 0 5px #03e9f4; }
+        .input-group input:focus, .input-group input:valid { border-bottom: 2px solid #03e9f4; box-shadow: 0 5px 10px -5px #03e9f4; }
+
+        button { 
+            position: relative; display: inline-block; padding: 1.5vh 30px; 
+            color: #03e9f4; font-size: clamp(16px, 4vw, 20px); 
+            text-transform: uppercase; letter-spacing: 4px; 
+            background: rgba(0,0,0,0.3); border: 1px solid #03e9f4; 
+            border-radius: 5px; cursor: pointer; width: 80%; 
+            max-width: 300px; font-family: 'Times New Roman', Times, serif; 
+            font-weight: bold; margin-bottom: 2vh; 
+            backdrop-filter: blur(2px); 
+            box-shadow: 0 0 5px rgba(3, 233, 244, 0.2);
+            transform: translateZ(0);
+        }
+        button:hover { background: #03e9f4; color: #050801; box-shadow: 0 0 20px #03e9f4; }
+        .btn-secondary { color: #ff00cc; border: 1px solid #ff00cc; box-shadow: 0 0 5px rgba(255, 0, 204, 0.2); }
+        .btn-secondary:hover { background: #ff00cc; color: #050801; box-shadow: 0 0 20px #ff00cc; }
+        .btn-small { width: auto; padding: 1vh 25px; font-size: 14px; margin-top: 1vh; border: none; color: rgba(255,255,255,0.5); box-shadow: none; }
+        .btn-small:hover { color: white; background: transparent; box-shadow: none; text-shadow: 0 0 5px white; }
+
+        .id-display { font-size: clamp(28px, 8vw, 40px); letter-spacing: 4px; color: #03e9f4; margin: 2vh 0; font-weight: bold; cursor: pointer; word-break: break-all; text-shadow: 0 0 10px rgba(3, 233, 244, 0.5); }
+        .pulse-text { animation: pulse 2s infinite; font-size: 14px; font-style: italic; margin-top: 2vh; opacity: 0.7; }
+        @keyframes pulse { 0% { opacity: 0.3; } 50% { opacity: 1; } 100% { opacity: 0.3; } }
+
+        /* --- LEADERBOARD STYLES --- */
+        .leaderboard-title {
+            font-size: clamp(16px, 4vw, 22px);
+            color: #03e9f4;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            margin-bottom: 15px;
+            margin-top: 3vh;
+            text-shadow: 0 0 10px #03e9f4, 0 0 20px #03e9f4;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-weight: bold;
+        }
+
+        .leaderboard-container {
+            width: 85%;
+            max-width: 350px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(3, 233, 244, 0.3);
+            border-radius: 10px;
+            backdrop-filter: blur(5px);
+            max-height: 25vh;
+            overflow-y: auto;
+        }
+
+        .leaderboard-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .leaderboard-item {
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            padding: 8px 12px;
+            margin-bottom: 5px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
+            border-left: 3px solid #ff00cc;
+            animation: slideIn 0.3s ease;
+        }
+
+        .leaderboard-item:nth-child(1) {
+            border-left-color: gold;
+            background: rgba(255, 215, 0, 0.1);
+        }
+
+        .leaderboard-item:nth-child(2) {
+            border-left-color: silver;
+            background: rgba(192, 192, 192, 0.1);
+        }
+
+        .leaderboard-item:nth-child(3) {
+            border-left-color: #cd7f32;
+            background: rgba(205, 127, 50, 0.1);
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .leaderboard-rank {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.7);
+            min-width: 25px;
+            font-weight: bold;
+        }
+
+        .leaderboard-name {
+            flex: 1;
+            font-size: clamp(12px, 3vw, 14px);
+            color: #fff;
+            text-align: left;
+            padding-left: 10px;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+
+        .leaderboard-empty {
+            color: rgba(255, 255, 255, 0.4);
+            font-style: italic;
+            font-size: 12px;
+            padding: 10px;
+        }
+
+        .leaderboard-timer {
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.3);
+            margin-top: 10px;
+            font-family: 'Courier New', monospace;
+        }
+
+        /* --- 4. BOARD --- */
+        .game-header-container {
+            width: min(88vw, 55vh); position: relative;
+            margin-bottom: 1vh; margin-top: 5vh; 
+            display: flex; justify-content: center;
+            align-items: center; margin-left: auto; margin-right: auto;
+            contain: layout style;
+        }
+
+        .game-info { margin: 0; font-size: clamp(16px, 5vw, 20px); font-weight: bold; }
+        .turn-indicator { color: #03e9f4; text-shadow: 0 0 10px #03e9f4; letter-spacing: 3px; }
+        
+        .timer-display {
+            position: absolute; top: -45px; left: 50%; transform: translateX(-50%); 
+            font-family: 'Courier New', monospace; font-size: clamp(18px, 5vw, 24px);
+            font-weight: bold; color: #fff; text-shadow: 0 0 10px #ff0000;
+            border: 2px solid #ff0000; background: rgba(0,0,0,0.6);
+            padding: 2px 8px; border-radius: 4px; box-shadow: 0 0 15px #ff0000;
+            z-index: 50;
+            contain: layout style paint;
+        }
+
+        .timer-warning {
+            color: red !important;
+            border-color: red !important;
+            box-shadow: 0 0 20px red !important;
+            animation: timer-pulse 0.5s ease-in-out infinite;
+        }
+
+        @keyframes timer-pulse {
+            0%, 100% { transform: translateX(-50%) scale(1); }
+            50% { transform: translateX(-50%) scale(1.1); }
+        }
+
+        .board { 
+            width: min(88vw, 55vh); height: min(88vw, 55vh);
+            display: grid; grid-template-columns: repeat(8, 1fr); 
+            grid-template-rows: repeat(8, 1fr); 
+            border: 8px solid #3e2723; border-radius: 4px; 
+            box-shadow: 0 0 30px rgba(0,0,0,0.8); 
+            background-color: #3e2723; margin: 0 auto !important;
+            transform: translateZ(0);
+            will-change: transform;
+            contain: layout style paint;
+            backface-visibility: hidden;
+        }
+        
+        .square { 
+            width: 100%; height: 100%; 
+            display: flex; justify-content: center; align-items: center;
+            contain: layout style;
+            will-change: background-color;
+        }
+        .square.dark { background-color: #251613; }
+        .square.light { background-color: #8D6E63; }
+        .square.highlight { background-color: rgba(3, 233, 244, 0.4); cursor: pointer; box-shadow: inset 0 0 15px #03e9f4; }
+        
+        .piece { 
+            width: 70%; height: 70%; border-radius: 50%; 
+            position: relative; box-shadow: 0 3px 5px rgba(0,0,0,0.5); 
+            transition: transform 0.15s cubic-bezier(0.4, 0.0, 0.2, 1); 
+            will-change: transform, box-shadow;
+            transform: translateZ(0);
+            backface-visibility: hidden;
+            contain: layout style paint;
+            border: 3px solid transparent;
+        }
+
+        /* --- BOUNCE JUMP ANIMATION --- */
+        @keyframes bounce-land {
+            0% { transform: scale(0.1) translateY(-50px); opacity: 0; }
+            50% { transform: scale(1.2) translateY(0); opacity: 1; }
+            70% { transform: scale(0.9); }
+            100% { transform: scale(1); }
+        }
+
+        .piece.bounce-effect {
+            animation: bounce-land 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            will-change: transform, opacity;
+            z-index: 20;
+        }
+
+        .p1 { background: #03e9f4; box-shadow: 0 0 15px #03e9f4, inset 0 0 5px rgba(255,255,255,0.5); }
+        .p2 { background: #ff00cc; box-shadow: 0 0 15px #ff00cc, inset 0 0 5px rgba(255,255,255,0.5); }
+        .king::after { content: '♔'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: black; font-size: 20px; font-weight: bold; }
+        .king { border: 2px solid white; box-shadow: 0 0 25px currentColor; }
+        .selected { transform: scale(1.2) translateZ(0); z-index: 10; border: 3px solid white; box-shadow: 0 0 30px white; }
+        .piece.dimmed { opacity: 0.5; }
+        .piece.forced-jump { box-shadow: 0 0 15px yellow !important; }
+        .piece.clickable { cursor: pointer; }
+
+        /* --- WHITE PULSING BORDER ANIMATION FOR PLAYER TURN --- */
+        @keyframes white-border-pulse {
+            0%, 100% { 
+                border-color: rgba(255, 255, 255, 0.5); 
+                box-shadow: 0 0 10px rgba(255, 255, 255, 0.3), inset 0 0 5px rgba(255, 255, 255, 0.3);
+            }
+            50% { 
+                border-color: rgba(255, 255, 255, 1); 
+                box-shadow: 0 0 25px rgba(255, 255, 255, 0.9), inset 0 0 10px rgba(255, 255, 255, 0.5);
+            }
+        }
+
+        .my-turn-glow { 
+            animation: white-border-pulse 1.2s ease-in-out infinite; 
+            border: 3px solid white !important; 
+            z-index: 5; 
+        }
+
+        .my-turn-glow.p1 {
+            box-shadow: 0 0 15px #03e9f4, inset 0 0 5px rgba(255,255,255,0.5);
+            animation: white-border-pulse-cyan 1.2s ease-in-out infinite;
+        }
+
+        .my-turn-glow.p2 {
+            box-shadow: 0 0 15px #ff00cc, inset 0 0 5px rgba(255,255,255,0.5);
+            animation: white-border-pulse-pink 1.2s ease-in-out infinite;
+        }
+
+        @keyframes white-border-pulse-cyan {
+            0%, 100% { 
+                border-color: rgba(255, 255, 255, 0.5); 
+                box-shadow: 0 0 15px #03e9f4, 0 0 8px rgba(255, 255, 255, 0.3);
+            }
+            50% { 
+                border-color: rgba(255, 255, 255, 1); 
+                box-shadow: 0 0 20px #03e9f4, 0 0 20px rgba(255, 255, 255, 0.8);
+            }
+        }
+
+        @keyframes white-border-pulse-pink {
+            0%, 100% { 
+                border-color: rgba(255, 255, 255, 0.5); 
+                box-shadow: 0 0 15px #ff00cc, 0 0 8px rgba(255, 255, 255, 0.3);
+            }
+            50% { 
+                border-color: rgba(255, 255, 255, 1); 
+                box-shadow: 0 0 20px #ff00cc, 0 0 20px rgba(255, 255, 255, 0.8);
+            }
+        }
+        
+        .board.flipped { transform: rotate(180deg) translateZ(0); }
+        .board.flipped .square { transform: rotate(180deg); }
+
+        /* --- 5. FLOATING UI --- */
+        .chat-container { 
+            position: fixed; 
+            bottom: max(20px, env(safe-area-inset-bottom)); 
+            right: 20px; 
+            z-index: 1000; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: flex-end;
+        }
+        .surrender-container { position: fixed; bottom: max(20px, env(safe-area-inset-bottom)); left: 20px; z-index: 1000; display: flex; flex-direction: column; align-items: flex-start; }
+        
+        .chat-bubble-btn { position: relative; width: 50px; height: 50px; border-radius: 50%; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(10px); border: 2px solid #03e9f4; box-shadow: 0 0 15px #03e9f4; display: flex; justify-content: center; align-items: center; font-size: 20px; cursor: pointer; transition: transform 0.3s; transform: translateZ(0); }
+        .chat-bubble-btn:hover { transform: scale(1.1) translateZ(0); }
+        .chat-bubble-btn.pink-theme { border-color: #ff00cc; box-shadow: 0 0 15px #ff00cc; }
+        
+        @keyframes bounceMsg { 0%, 20%, 50%, 80%, 100% {transform: translateY(0);} 40% {transform: translateY(-10px);} 60% {transform: translateY(-5px);} }
+        .notify-anim { animation: bounceMsg 0.6s ease; }
+        .notif-dot { position: absolute; top: -5px; right: -5px; width: 20px; height: 20px; background: red; border-radius: 50%; border: 2px solid white; display: none; justify-content: center; align-items: center; font-size: 10px; font-weight: bold; color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.5); font-family: Arial, sans-serif; z-index: 1002; }
+
+        /* --- FULLSCREEN CHAT PAGE --- */
+        .chat-page {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a0a1a 50%, #0a1a1a 100%);
+            z-index: 2000;
+            display: none;
+            flex-direction: column;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+
+        .chat-page.active {
+            display: flex;
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        /* Keyboard open state */
+        .chat-page.keyboard-open {
+            height: 100%;
+        }
+
+        .chat-page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            padding-top: max(15px, env(safe-area-inset-top));
+            background: rgba(0, 0, 0, 0.8);
+            border-bottom: 2px solid #03e9f4;
+            box-shadow: 0 0 20px rgba(3, 233, 244, 0.3);
+            flex-shrink: 0;
+        }
+
+        .chat-page-header.pink-theme {
+            border-bottom-color: #ff00cc;
+            box-shadow: 0 0 20px rgba(255, 0, 204, 0.3);
+        }
+
+        /* NEON BACK BUTTON */
+        .chat-back-btn {
+            width: 45px;
+            height: 45px;
+            border-radius: 5px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid #03e9f4;
+            color: #03e9f4;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s ease;
+            padding: 0;
+            margin: 0;
+            max-width: 45px;
+            text-shadow: 0 0 10px #03e9f4, 0 0 20px #03e9f4, 0 0 30px #03e9f4;
+            box-shadow: 0 0 10px rgba(3, 233, 244, 0.4), inset 0 0 10px rgba(3, 233, 244, 0.1);
+        }
+
+        .chat-back-btn:hover {
+            background: rgba(3, 233, 244, 0.2);
+            color: #fff;
+            text-shadow: 0 0 15px #03e9f4, 0 0 30px #03e9f4, 0 0 45px #03e9f4;
+            box-shadow: 0 0 20px rgba(3, 233, 244, 0.6), inset 0 0 15px rgba(3, 233, 244, 0.2);
+            transform: scale(1.05);
+        }
+
+        .chat-back-btn.pink-theme {
+            border-color: #ff00cc;
+            color: #ff00cc;
+            text-shadow: 0 0 10px #ff00cc, 0 0 20px #ff00cc, 0 0 30px #ff00cc;
+            box-shadow: 0 0 10px rgba(255, 0, 204, 0.4), inset 0 0 10px rgba(255, 0, 204, 0.1);
+        }
+
+        .chat-back-btn.pink-theme:hover {
+            background: rgba(255, 0, 204, 0.2);
+            color: #fff;
+            text-shadow: 0 0 15px #ff00cc, 0 0 30px #ff00cc, 0 0 45px #ff00cc;
+            box-shadow: 0 0 20px rgba(255, 0, 204, 0.6), inset 0 0 15px rgba(255, 0, 204, 0.2);
+        }
+
+        .chat-page-title {
+            font-size: clamp(18px, 5vw, 24px);
+            font-weight: bold;
+            color: #03e9f4;
+            text-shadow: 0 0 10px #03e9f4;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+
+        .chat-page-title.pink-theme {
+            color: #ff00cc;
+            text-shadow: 0 0 10px #ff00cc;
+        }
+
+        .chat-header-right {
+            width: 45px;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .online-indicator {
+            width: 12px;
+            height: 12px;
+            background: #00ff00;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #00ff00;
+            animation: online-pulse 2s infinite;
+        }
+
+        @keyframes online-pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(0.9); }
+        }
+
+        .chat-messages-fullscreen {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px; /* Slightly reduced gap */
+            -webkit-overflow-scrolling: touch;
+            scroll-behavior: smooth;
+            touch-action: pan-y;
+            overscroll-behavior: contain;
+            min-height: 0;
+        }
+
+        .chat-messages-fullscreen::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .chat-messages-fullscreen::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 2px;
+        }
+
+        .chat-messages-fullscreen::-webkit-scrollbar-thumb {
+            background: #03e9f4;
+            border-radius: 2px;
+        }
+
+        .chat-empty-fullscreen {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            color: rgba(255, 255, 255, 0.3);
+            font-size: 16px;
+            text-align: center;
+            gap: 15px;
+        }
+
+        .chat-empty-icon {
+            font-size: 60px;
+            opacity: 0.3;
+        }
+
+        .chat-empty-text {
+            font-style: italic;
+            letter-spacing: 1px;
+        }
+
+        /* --- ORGANIZED CHAT BUBBLES --- */
+        .msg-container {
+            display: flex;
+            flex-direction: column;
+            max-width: 80%;
+            margin-bottom: 4px;
+            animation: msgSlideIn 0.3s ease;
+        }
+
+        @keyframes msgSlideIn {
+            from { opacity: 0; transform: translateY(20px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .msg-container.mine {
+            align-self: flex-end;
+            align-items: flex-end;
+        }
+
+        .msg-container.theirs {
+            align-self: flex-start;
+            align-items: flex-start;
+        }
+
+        .msg-label {
+            font-size: 11px;
+            color: rgba(255,255,255,0.5);
+            margin-bottom: 2px;
+            margin-left: 10px;
+            margin-right: 10px;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+        }
+
+        .msg-bubble {
+            padding: 10px 14px;
+            border-radius: 18px;
+            position: relative;
+            word-wrap: break-word;
+            font-size: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            min-width: 80px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .msg-bubble.mine {
+            background: linear-gradient(135deg, #03e9f4 0%, #00b8d4 100%);
+            color: #000;
+            border-bottom-right-radius: 4px;
+        }
+
+        .msg-bubble.theirs {
+            background: #2a2a2a;
+            color: #fff;
+            border: 1px solid rgba(255, 0, 204, 0.3);
+            border-bottom-left-radius: 4px;
+        }
+
+        .msg-text-content {
+            margin-bottom: 2px;
+        }
+
+        .msg-timestamp {
+            font-size: 10px;
+            opacity: 0.7;
+            text-align: right;
+            margin-top: 2px;
+            align-self: flex-end;
+            font-weight: bold;
+        }
+
+        .msg-bubble.mine .msg-timestamp { opacity: 0.6; color: #000; }
+
+
+        .chat-input-fullscreen {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 15px 20px;
+            padding-bottom: max(15px, env(safe-area-inset-bottom));
+            background: rgba(0, 0, 0, 0.95);
+            border-top: 1px solid rgba(3, 233, 244, 0.3);
+            flex-shrink: 0;
+            transition: padding-bottom 0.2s ease;
+        }
+
+        /* When keyboard is open, reduce bottom padding */
+        .chat-page.keyboard-open .chat-input-fullscreen {
+            padding-bottom: 10px;
+        }
+
+        .chat-input-fullscreen.pink-theme {
+            border-top-color: rgba(255, 0, 204, 0.3);
+        }
+
+        .chat-input-fullscreen input {
+            flex: 1;
+            padding: 15px 20px;
+            border-radius: 25px;
+            border: 2px solid rgba(3, 233, 244, 0.3);
+            outline: none;
+            font-size: 16px !important;
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            font-family: 'Times New Roman', Times, serif;
+            transition: all 0.3s ease;
+        }
+
+        .chat-input-fullscreen input::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .chat-input-fullscreen input:focus {
+            border-color: #03e9f4;
+            box-shadow: 0 0 20px rgba(3, 233, 244, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .chat-input-fullscreen.pink-theme input:focus {
+            border-color: #ff00cc;
+            box-shadow: 0 0 20px rgba(255, 0, 204, 0.3);
+        }
+
+        /* NEON SEND BUTTON */
+        .chat-send-btn {
+            width: 55px;
+            height: 55px;
+            padding: 0;
+            margin: 0;
+            font-size: 24px;
+            font-weight: bold;
+            max-width: none;
+            border-radius: 5px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid #03e9f4;
+            color: #03e9f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-shrink: 0;
+            text-shadow: 0 0 10px #03e9f4, 0 0 20px #03e9f4, 0 0 30px #03e9f4;
+            box-shadow: 0 0 10px rgba(3, 233, 244, 0.4), inset 0 0 10px rgba(3, 233, 244, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .chat-send-btn:hover {
+            background: rgba(3, 233, 244, 0.2);
+            color: #fff;
+            text-shadow: 0 0 15px #03e9f4, 0 0 30px #03e9f4, 0 0 45px #03e9f4;
+            box-shadow: 0 0 25px rgba(3, 233, 244, 0.6), inset 0 0 15px rgba(3, 233, 244, 0.2);
+            transform: scale(1.05);
+        }
+
+        .chat-send-btn.pink-theme {
+            border-color: #ff00cc;
+            color: #ff00cc;
+            text-shadow: 0 0 10px #ff00cc, 0 0 20px #ff00cc, 0 0 30px #ff00cc;
+            box-shadow: 0 0 10px rgba(255, 0, 204, 0.4), inset 0 0 10px rgba(255, 0, 204, 0.1);
+        }
+
+        .chat-send-btn.pink-theme:hover {
+            background: rgba(255, 0, 204, 0.2);
+            color: #fff;
+            text-shadow: 0 0 15px #ff00cc, 0 0 30px #ff00cc, 0 0 45px #ff00cc;
+            box-shadow: 0 0 25px rgba(255, 0, 204, 0.6), inset 0 0 15px rgba(255, 0, 204, 0.2);
+        }
+
+        /* --- 6. SMOOTH WINNER PAGE & RAINBOW FX --- */
+        @keyframes smooth-rainbow {
+            0% { filter: hue-rotate(0deg); color: #ff0000; text-shadow: 0 0 15px #ff0000; }
+            50% { text-shadow: 0 0 25px currentColor; }
+            100% { filter: hue-rotate(360deg); color: #ff0000; text-shadow: 0 0 15px #ff0000; }
+        }
+
+        @keyframes border-rainbow-smooth {
+            0% { filter: hue-rotate(0deg); border-color: #ff0000; box-shadow: inset 0 0 30px #ff0000, 0 0 30px #ff0000; }
+            100% { filter: hue-rotate(360deg); border-color: #ff0000; box-shadow: inset 0 0 30px #ff0000, 0 0 30px #ff0000; }
+        }
+
+        .screen-border-fx {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 500; border: 10px solid #ff0000;
+            box-sizing: border-box; 
+            animation: border-rainbow-smooth 5s linear infinite;
+            will-change: filter;
+            transform: translateZ(0);
+        }
+
+        .rainbow-effect { animation: smooth-rainbow 5s linear infinite; will-change: filter; }
+
+        .winner-display { font-size: clamp(24px, 6vw, 40px); font-weight: bold; margin-bottom: 1vh; text-transform: uppercase; word-break: break-word; }
+        .loser-display { font-size: clamp(14px, 4vw, 20px); color: #888; margin-bottom: 1vh; margin-top: 2vh; font-weight: bold; text-transform: uppercase; word-break: break-word; }
+        .winner-label { font-size: clamp(14px, 4vw, 22px); letter-spacing: 4px; text-transform: uppercase; margin-bottom: 2vh; font-weight: bold; }
+        .timestamp-display { font-size: clamp(10px, 3vw, 14px); letter-spacing: 2px; margin-bottom: 2vh; font-family: 'Courier New', monospace; font-weight: bold; opacity: 0.8; }
+        
+        .room-id-footer { 
+            margin-top: 3vh; font-size: 14px; color: rgba(255, 255, 255, 0.4); 
+            font-family: 'Courier New', monospace; letter-spacing: 2px; 
+            border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; width: 80%;
+        }
+
+        /* --- REMATCH MODAL --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85); z-index: 2000;
+            display: flex; justify-content: center; align-items: center;
+            backdrop-filter: blur(5px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            will-change: opacity;
+        }
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-box {
+            width: 80%; max-width: 400px;
+            background: #000; border: 2px solid #03e9f4;
+            padding: 30px; border-radius: 10px;
+            box-shadow: 0 0 20px rgba(3, 233, 244, 0.3);
+            text-align: center;
+            transform: scale(0.9) translateZ(0);
+            transition: transform 0.3s ease;
+            will-change: transform;
+        }
+        .modal-overlay.active .modal-box {
+            transform: scale(1) translateZ(0);
+        }
+
+        .modal-box h3 { color: #03e9f4; margin-top: 0; text-shadow: 0 0 10px #03e9f4; }
+
+        .hidden { display: none !important; }
+        .fade-in { animation: fadeIn 0.5s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+    <!-- NEON BACKGROUND ELEMENTS -->
+    <div class="bg-neon" id="bg-neon"></div>
+    
+    <!-- RAINBOW BORDER CONTAINER -->
+    <div id="winner-border-fx" class="screen-border-fx hidden"></div>
+
+    <!-- REMATCH MODAL -->
+    <div id="rematch-modal" class="modal-overlay">
+        <div class="modal-box">
+            <h3>REMATCH REQUEST</h3>
+            <p id="rematch-status-text">Opponent wants to play again!</p>
+            <div id="rematch-actions" style="margin-top: 20px;">
+                <button onclick="G.acceptRematch()">ACCEPT</button>
+                <button class="btn-secondary" onclick="G.declineRematch()">DECLINE</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FULLSCREEN CHAT PAGE -->
+    <div id="chat-page" class="chat-page">
+        <div id="chat-page-header" class="chat-page-header">
+            <button id="chat-back-btn" class="chat-back-btn" onclick="G.toggleChat()">←</button>
+            <div id="chat-page-title" class="chat-page-title">💬 CHAT</div>
+            <div class="chat-header-right">
+                <div class="online-indicator"></div>
+            </div>
+        </div>
+        
+        <div id="chat-messages" class="chat-messages-fullscreen">
+            <div class="chat-empty-fullscreen" id="chat-empty">
+                <div class="chat-empty-icon">💬</div>
+                <div class="chat-empty-text">No messages yet...<br>Start the conversation!</div>
+            </div>
+        </div>
+        
+        <div id="chat-input-area" class="chat-input-fullscreen">
+            <input type="text" id="chat-input" placeholder="Type a message..." autocomplete="off">
+            <button id="chat-send-btn" class="chat-send-btn" onclick="G.sendMessage()">➤</button>
+        </div>
+    </div>
+
+    <div class="scroll-wrapper">
+        <div class="container-wrapper" id="main-container">
+            <div id="page-login" class="fade-in">
+                <h2>Daju</h2>
+                <form onsubmit="G.goToPage2(event)">
+                    <div class="input-group">
+                        <input type="text" id="username" required autocomplete="off">
+                        <label>Username</label>
+                    </div>
+                    <button type="submit">Enter</button>
+                </form>
+                
+                <!-- LEADERBOARD -->
+                <div class="leaderboard-title">WINNERS</div>
+                <div class="leaderboard-container" id="leaderboard-container">
+                    <ul class="leaderboard-list" id="leaderboard-list">
+                        <li class="leaderboard-empty">No winners yet...</li>
+                    </ul>
+                    <div class="leaderboard-timer" id="leaderboard-timer">Resets in: --:--</div>
+                </div>
+            </div>
+
+            <div id="page-selection" class="hidden fade-in">
+                <h3 id="welcome-text" style="font-size: clamp(24px, 5vw, 32px); font-weight: bold; margin-bottom: 5vh; color: #03e9f4; text-shadow: 0 0 10px #03e9f4;"></h3>
+                <button onclick="G.goToHostPage()">Host</button>
+                <button class="btn-secondary" onclick="G.goToJoinPage()">Join</button>
+            </div>
+
+            <div id="page-host" class="hidden fade-in">
+                <h2>Hosting</h2>
+                <p>Room ID:</p>
+                <div id="room-id-box" class="id-display" onclick="G.copyId()">...</div>
+                <p id="copy-status" style="font-size: 12px; height: 15px; color: #03e9f4;"></p>
+                <div class="pulse-text" id="host-status-text">Waiting for player to join...</div>
+                <button class="btn-small" onclick="G.goBackToSelection('page-host')">Cancel</button>
+            </div>
+
+            <div id="page-join" class="hidden fade-in">
+                <h2>Join</h2>
+                <p style="margin-bottom: 3vh;">Enter ID to connect</p>
+                <form onsubmit="G.connectToRoom(event)">
+                    <div class="input-group">
+                        <input type="text" id="room-id-input" class="uppercase-input" required maxlength="6" autocomplete="off">
+                        <label>Room ID</label>
+                    </div>
+                    <button type="submit" class="btn-secondary">Connect</button>
+                </form>
+                <button class="btn-small" onclick="G.goBackToSelection('page-join')">Back</button>
+            </div>
+
+            <div id="page-game" class="hidden fade-in">
+                <div class="game-header-container">
+                    <div class="game-info">
+                        <span id="turn-text" class="turn-indicator">WAITING...</span>
+                    </div>
+                    <div id="timer-box" class="timer-display">35</div>
+                </div>
+
+                <div id="board" class="board"></div>
+                <p id="game-end-msg" style="margin-top:20px; color:#fff; font-weight:bold;"></p>
+            </div>
+
+            <div id="page-winner" class="hidden fade-in">
+                <div class="winner-label rainbow-effect">GAME OVER</div>
+                
+                <div id="game-start-time" class="timestamp-display rainbow-effect"></div>
+
+                <div id="winner-name" class="winner-display rainbow-effect"></div>
+                <div id="loser-name" class="loser-display"></div>
+
+                <button onclick="location.reload()" style="margin-top: 25px;">RETURN</button>
+                
+                <button id="rematch-btn" onclick="G.triggerRematchUI()" class="btn-secondary">REMATCH</button>
+                
+                <div class="room-id-footer">ROOM ID: <span id="end-room-id"></span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SURRENDER UI -->
+    <div id="surrender-ui" class="surrender-container hidden">
+        <div id="surrender-btn" class="chat-bubble-btn" onclick="G.triggerSurrender()" title="Surrender">🏳️</div>
+    </div>
+
+    <!-- CHAT BUTTON -->
+    <div id="chat-ui" class="chat-container hidden">
+        <div id="chat-btn" class="chat-bubble-btn" onclick="G.toggleChat()">
+            💬
+            <div id="notif-dot" class="notif-dot">0</div>
+        </div>
+    </div>
+
+    <script>
+    'use strict';
+
+    const G = (function() {
+        const DOM = {};
+        const domIds = [
+            'main-container', 'page-login', 'page-selection', 'page-host', 'page-join',
+            'page-game', 'page-winner', 'board', 'turn-text', 'timer-box', 'username',
+            'welcome-text', 'room-id-box', 'copy-status', 'host-status-text', 'room-id-input',
+            'chat-ui', 'surrender-ui', 'chat-btn', 'surrender-btn', 'chat-page',
+            'chat-input', 'chat-messages', 'chat-empty', 'notif-dot', 'winner-border-fx', 'rematch-modal',
+            'rematch-status-text', 'rematch-btn', 'game-start-time', 'winner-name',
+            'loser-name', 'end-room-id', 'bg-neon', 'chat-page-header', 'chat-page-title',
+            'chat-back-btn', 'chat-input-area', 'chat-send-btn', 'leaderboard-list', 'leaderboard-timer'
+        ];
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBh83uuhyPhPiOOeetoyCHsDdXdKqGZMxY",
+            authDomain: "jamdaju01.firebaseapp.com",
+            projectId: "jamdaju01",
+            storageBucket: "jamdaju01.firebasestorage.app",
+            messagingSenderId: "387425547593",
+            appId: "1:387425547593:web:a08ba9899ae13d75e91698",
+            measurementId: "G-XVPFLQCDM3",
+            databaseURL: "https://jamdaju01-default-rtdb.firebaseio.com"
+        };
+
+        let db = null;
+
+        const state = {
+            currentUser: "",
+            currentRoomId: "",
+            myPlayerNumber: 0,
+            boardData: null,
+            turn: 1,
+            gameActive: false,
+            selectedPiece: null,
+            validMoves: [],
+            isChatOpen: false,
+            unreadCount: 0,
+            mustJumpFrom: null,
+            serverTimeOffset: 0,
+            lastLocalInteraction: 0,
+            p1Name: "",
+            p2Name: "",
+            lastBoardHash: "",
+            lastTurn: -1,
+            timerRAF: null,
+            lastMoveTime: 0,
+            winnerShown: false,
+            keyboardVisible: false,
+            initialViewportHeight: 0,
+            messageCount: 0,
+            presenceInterval: null,
+            disconnectRef: null,
+            gameStarted: false,
+            timeoutTriggered: false,
+            localStartTime: 0,
+            leaderboardResetTime: 0,
+            leaderboardTimerInterval: null,
+            lastLanded: null
+        };
+
+        const squarePool = [];
+        const piecePool = [];
+        let boardInitialized = false;
+
+        const INITIAL_BOARD = Object.freeze([
+            [0, 2, 0, 2, 0, 2, 0, 2], [2, 0, 2, 0, 2, 0, 2, 0], [0, 2, 0, 2, 0, 2, 0, 2],
+            [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0],
+            [1, 0, 1, 0, 1, 0, 1, 0], [0, 1, 0, 1, 0, 1, 0, 1], [1, 0, 1, 0, 1, 0, 1, 0]
+        ]);
+
+        const DIRS = Object.freeze([[-1, -1], [-1, 1], [1, -1], [1, 1]]);
+        const TIME_LIMIT = 35000;
+        const PRESENCE_INTERVAL = 5000;
+        const DISCONNECT_TIMEOUT = 15000;
+        const LEADERBOARD_DURATION = 3600000; // 1 hour in milliseconds
+
+        function hashBoard(board) {
+            if (!board) return "";
+            let h = 0;
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    h = ((h << 3) - h + (board[r]?.[c] || 0)) | 0;
+                }
+            }
+            return h.toString(36);
+        }
+
+        function cloneBoard(src) {
+            const b = new Array(8);
+            for (let r = 0; r < 8; r++) {
+                b[r] = src[r] ? src[r].slice() : [0,0,0,0,0,0,0,0];
+            }
+            return b;
+        }
+
+        function getInitialBoard() {
+            return cloneBoard(INITIAL_BOARD);
+        }
+
+        function isValid(r, c) {
+            return (r >>> 0) < 8 && (c >>> 0) < 8;
+        }
+
+        function cacheDom() {
+            for (const id of domIds) {
+                DOM[id] = document.getElementById(id);
+            }
+        }
+
+        function initFirebase() {
+            try {
+                firebase.initializeApp(firebaseConfig);
+                db = firebase.database();
+                db.ref(".info/serverTimeOffset").on("value", snap => {
+                    state.serverTimeOffset = snap.val() || 0;
+                });
+                
+                // Initialize leaderboard after Firebase is ready
+                initLeaderboard();
+            } catch(e) {
+                console.error("Firebase init failed:", e);
+            }
+        }
+
+        // --- LEADERBOARD FUNCTIONS ---
+        function initLeaderboard() {
+            // Listen to leaderboard data
+            db.ref('leaderboard').on('value', snapshot => {
+                updateLeaderboardDisplay(snapshot.val());
+            });
+
+            // Listen to reset time
+            db.ref('leaderboard_reset_time').on('value', snapshot => {
+                const resetTime = snapshot.val();
+                if (resetTime) {
+                    state.leaderboardResetTime = resetTime;
+                    checkAndResetLeaderboard();
+                } else {
+                    // Initialize reset time if not exists
+                    const newResetTime = Date.now() + LEADERBOARD_DURATION;
+                    db.ref('leaderboard_reset_time').set(newResetTime);
+                    state.leaderboardResetTime = newResetTime;
+                }
+                startLeaderboardTimer();
+            });
+        }
+
+        function checkAndResetLeaderboard() {
+            const now = Date.now() + state.serverTimeOffset;
+            if (now >= state.leaderboardResetTime) {
+                // Reset the leaderboard
+                db.ref('leaderboard').remove();
+                const newResetTime = now + LEADERBOARD_DURATION;
+                db.ref('leaderboard_reset_time').set(newResetTime);
+                state.leaderboardResetTime = newResetTime;
+            }
+        }
+
+        function startLeaderboardTimer() {
+            if (state.leaderboardTimerInterval) {
+                clearInterval(state.leaderboardTimerInterval);
+            }
+
+            state.leaderboardTimerInterval = setInterval(() => {
+                const now = Date.now() + state.serverTimeOffset;
+                const remaining = state.leaderboardResetTime - now;
+
+                if (remaining <= 0) {
+                    checkAndResetLeaderboard();
+                    return;
+                }
+
+                const minutes = Math.floor(remaining / 60000);
+                const seconds = Math.floor((remaining % 60000) / 1000);
+                const timerEl = DOM['leaderboard-timer'];
+                if (timerEl) {
+                    timerEl.textContent = `Resets in: ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                }
+            }, 1000);
+        }
+
+        function updateLeaderboardDisplay(data) {
+            const listEl = DOM['leaderboard-list'];
+            if (!listEl) return;
+
+            listEl.innerHTML = '';
+
+            if (!data || Object.keys(data).length === 0) {
+                listEl.innerHTML = '<li class="leaderboard-empty">No winners yet...</li>';
+                return;
+            }
+
+            // Convert to array and sort by lastWin ascending (first to win ranks higher)
+            const winners = [];
+            for (const name in data) {
+                winners.push({ 
+                    name: name, 
+                    lastWin: data[name].lastWin || 0
+                });
+            }
+            winners.sort((a, b) => a.lastWin - b.lastWin);
+
+            // Display top 10
+            const top10 = winners.slice(0, 10);
+            top10.forEach((winner, index) => {
+                const li = document.createElement('li');
+                li.className = 'leaderboard-item';
+
+                li.innerHTML = `
+                    <span class="leaderboard-rank">${index + 1}</span>
+                    <span class="leaderboard-name">${escapeHtml(winner.name)}</span>
+                `;
+                listEl.appendChild(li);
+            });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function addWinToLeaderboard(winnerName) {
+            if (!winnerName) return;
+
+            const winnerRef = db.ref('leaderboard/' + winnerName);
+            winnerRef.transaction(currentData => {
+                if (currentData) {
+                    currentData.wins = (currentData.wins || 0) + 1;
+                    currentData.lastWin = Date.now();
+                    return currentData;
+                } else {
+                    return { wins: 1, lastWin: Date.now() };
+                }
+            });
+        }
+
+        function switchPage(from, to) {
+            DOM[from].classList.add('hidden');
+            const toPage = DOM[to];
+            toPage.classList.remove('hidden');
+            toPage.offsetWidth;
+            toPage.classList.remove('fade-in');
+            toPage.classList.add('fade-in');
+        }
+
+        async function getPublicIP() {
+            try {
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 3000);
+                const response = await fetch('https://api.ipify.org?format=json', { signal: controller.signal });
+                clearTimeout(timeout);
+                const data = await response.json();
+                return data.ip;
+            } catch (e) {
+                return "HIDDEN_PROXY";
+            }
+        }
+
+        function startPresence() {
+            if (state.presenceInterval) {
+                clearInterval(state.presenceInterval);
+            }
+
+            const presenceKey = state.myPlayerNumber === 1 ? 'p1_presence' : 'p2_presence';
+            
+            updatePresence();
+            state.presenceInterval = setInterval(updatePresence, PRESENCE_INTERVAL);
+
+            state.disconnectRef = db.ref('rooms/' + state.currentRoomId + '/' + presenceKey);
+            state.disconnectRef.onDisconnect().set(0);
+        }
+
+        function updatePresence() {
+            if (!state.currentRoomId || !state.gameActive) return;
+            
+            const presenceKey = state.myPlayerNumber === 1 ? 'p1_presence' : 'p2_presence';
+            const serverTime = Date.now() + state.serverTimeOffset;
+            
+            db.ref('rooms/' + state.currentRoomId + '/' + presenceKey).set(serverTime);
+        }
+
+        function stopPresence() {
+            if (state.presenceInterval) {
+                clearInterval(state.presenceInterval);
+                state.presenceInterval = null;
+            }
+            if (state.disconnectRef) {
+                state.disconnectRef.onDisconnect().cancel();
+                state.disconnectRef = null;
+            }
+        }
+
+        function checkOpponentPresence(data) {
+            if (!state.gameActive || !state.gameStarted) return false;
+
+            const opponentPresenceKey = state.myPlayerNumber === 1 ? 'p2_presence' : 'p1_presence';
+            const opponentPresence = data[opponentPresenceKey];
+            
+            if (!opponentPresence) return false;
+
+            const serverTime = Date.now() + state.serverTimeOffset;
+            const timeSincePresence = serverTime - opponentPresence;
+
+            return timeSincePresence > DISCONNECT_TIMEOUT;
+        }
+
+        function goToPage2(e) {
+            e.preventDefault();
+            const input = DOM['username'];
+            if (input.value.trim() === "") return;
+            state.currentUser = input.value.trim();
+            switchPage('page-login', 'page-selection');
+            DOM['welcome-text'].textContent = "GOODLUCK!";
+        }
+
+        async function goToHostPage() {
+            const btn = DOM['page-selection'].querySelector('button');
+            const originalText = btn.textContent;
+            btn.textContent = "Initializing...";
+
+            const randomId = Math.random().toString(36).substring(2, 8).toUpperCase();
+            state.currentRoomId = randomId;
+            state.myPlayerNumber = 1;
+
+            const ip = await getPublicIP();
+
+            DOM['room-id-box'].textContent = randomId;
+            switchPage('page-selection', 'page-host');
+            btn.textContent = originalText;
+
+            const roomRef = db.ref('rooms/' + randomId);
+            
+            await roomRef.set({
+                board: getInitialBoard(),
+                turn: 1,
+                status: 'waiting',
+                p1: state.currentUser,
+                p2: '',
+                p1_ip: ip,
+                p2_ip: '',
+                mustJumpFrom: null,
+                winner: null,
+                surrender: null,
+                p1_presence: Date.now() + state.serverTimeOffset,
+                p2_presence: 0,
+                rematch: null,
+                timeout: null
+            });
+
+            roomRef.child('p2').on('value', snapshot => {
+                if (snapshot.val()) {
+                    DOM['host-status-text'].textContent = snapshot.val() + " connected!";
+                    setTimeout(startGameSetup, 800);
+                }
+            });
+        }
+
+        function goToJoinPage() {
+            switchPage('page-selection', 'page-join');
+        }
+
+        async function connectToRoom(e) {
+            e.preventDefault();
+            const inputId = DOM['room-id-input'].value.toUpperCase();
+            const btn = DOM['page-join'].querySelector('button[type="submit"]');
+            btn.textContent = "Tracing...";
+
+            const ip = await getPublicIP();
+
+            db.ref('rooms/' + inputId).once('value', snapshot => {
+                if (snapshot.exists() && snapshot.val().status === 'waiting') {
+                    state.currentRoomId = inputId;
+                    state.myPlayerNumber = 2;
+
+                    db.ref('rooms/' + inputId).update({
+                        p2: state.currentUser,
+                        status: 'playing',
+                        p2_ip: ip,
+                        startTime: Date.now(),
+                        lastMoveTime: firebase.database.ServerValue.TIMESTAMP,
+                        winner: null,
+                        surrender: null,
+                        p2_presence: Date.now() + state.serverTimeOffset,
+                        rematch: null,
+                        timeout: null
+                    });
+
+                    btn.textContent = "Connected!";
+                    setTimeout(startGameSetup, 800);
+                } else {
+                    alert("Unavailable room.");
+                    btn.textContent = "Connect";
+                }
+            });
+        }
+
+        function goBackToSelection(fromId) {
+            if (fromId === 'page-host' && state.currentRoomId) {
+                db.ref('rooms/' + state.currentRoomId).remove();
+                state.currentRoomId = "";
+            }
+            switchPage(fromId, 'page-selection');
+        }
+
+        function initBoardDOM() {
+            if (boardInitialized) return;
+            
+            const boardEl = DOM['board'];
+            const fragment = document.createDocumentFragment();
+
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    const square = document.createElement('div');
+                    square.className = 'square ' + ((r + c) % 2 === 1 ? 'dark' : 'light');
+                    square.dataset.r = r;
+                    square.dataset.c = c;
+                    squarePool.push(square);
+                    fragment.appendChild(square);
+                }
+            }
+
+            boardEl.appendChild(fragment);
+            boardEl.addEventListener('click', handleBoardClick, { passive: true });
+            
+            boardInitialized = true;
+        }
+
+        function handleBoardClick(e) {
+            if (!state.gameActive || state.turn !== state.myPlayerNumber) return;
+
+            let target = e.target;
+            
+            if (target.classList.contains('piece')) {
+                // Clear bounce effect on selection to clean up
+                state.lastLanded = null;
+
+                const square = target.parentElement;
+                const r = parseInt(square.dataset.r);
+                const c = parseInt(square.dataset.c);
+                const val = state.boardData[r][c];
+                const isMine = (state.myPlayerNumber === 1 && (val === 1 || val === 3)) ||
+                               (state.myPlayerNumber === 2 && (val === 2 || val === 4));
+                
+                if (isMine) {
+                    if (state.mustJumpFrom) {
+                        if (state.mustJumpFrom.r === r && state.mustJumpFrom.c === c) {
+                            selectPiece(r, c);
+                        }
+                    } else {
+                        selectPiece(r, c);
+                    }
+                }
+                return;
+            }
+            
+            if (target.classList.contains('square') && target.classList.contains('highlight')) {
+                const r = parseInt(target.dataset.r);
+                const c = parseInt(target.dataset.c);
+                executeMove(r, c);
+            }
+        }
+
+        function renderBoard() {
+            if (!state.boardData) return;
+            
+            const myTurn = state.gameActive && state.turn === state.myPlayerNumber;
+            const validMoveSet = new Set(state.validMoves.map(m => m.r * 8 + m.c));
+
+            for (let i = 0; i < 64; i++) {
+                const r = Math.floor(i / 8);
+                const c = i % 8;
+                const square = squarePool[i];
+                const val = state.boardData[r]?.[c] || 0;
+
+                const isDark = (r + c) % 2 === 1;
+                const isHighlight = isDark && validMoveSet.has(r * 8 + c);
+                
+                if (isHighlight) {
+                    if (!square.classList.contains('highlight')) {
+                        square.classList.add('highlight');
+                    }
+                } else {
+                    square.classList.remove('highlight');
+                }
+
+                let piece = square.querySelector('.piece');
+                
+                if (val > 0) {
+                    if (!piece) {
+                        piece = piecePool.pop() || document.createElement('div');
+                        piece.className = 'piece';
+                        square.appendChild(piece);
+                    }
+
+                    const isP1 = val === 1 || val === 3;
+                    const isKing = val === 3 || val === 4;
+                    const isSelected = state.selectedPiece && state.selectedPiece.r === r && state.selectedPiece.c === c;
+                    const isMine = (state.myPlayerNumber === 1 && isP1) || (state.myPlayerNumber === 2 && !isP1);
+                    
+                    let className = 'piece ' + (isP1 ? 'p1' : 'p2');
+                    if (isKing) className += ' king';
+                    if (isSelected) className += ' selected';
+
+                    // Apply Bounce Effect if this is the last landed piece
+                    if (state.lastLanded && state.lastLanded.r === r && state.lastLanded.c === c) {
+                        className += ' bounce-effect';
+                    }
+                    
+                    if (isMine && myTurn) {
+                        if (state.mustJumpFrom) {
+                            if (state.mustJumpFrom.r === r && state.mustJumpFrom.c === c) {
+                                className += ' my-turn-glow forced-jump clickable';
+                            } else {
+                                className += ' dimmed';
+                            }
+                        } else {
+                            className += ' my-turn-glow clickable';
+                        }
+                    }
+                    
+                    if (piece.className !== className) {
+                        piece.className = className;
+                    }
+                } else if (piece) {
+                    piecePool.push(piece);
+                    square.removeChild(piece);
+                }
+            }
+        }
+
+        function selectPiece(r, c) {
+            if (state.mustJumpFrom && (state.mustJumpFrom.r !== r || state.mustJumpFrom.c !== c)) return;
+
+            state.selectedPiece = { r, c };
+            const pVal = state.boardData[r][c];
+            state.validMoves = getAvailableMoves(r, c, pVal);
+
+            if (state.mustJumpFrom) {
+                state.validMoves = state.validMoves.filter(m => m.isJump);
+            }
+
+            renderBoard();
+        }
+
+        function getAvailableMoves(r, c, pVal) {
+            const moves = [];
+            const isKing = pVal === 3 || pVal === 4;
+            const isP1 = pVal === 1 || pVal === 3;
+            const opponent1 = isP1 ? 2 : 1;
+            const opponent2 = isP1 ? 4 : 3;
+
+            for (let d = 0; d < 4; d++) {
+                const dr = DIRS[d][0];
+                const dc = DIRS[d][1];
+
+                if (!state.mustJumpFrom) {
+                    if (isKing) {
+                        let dist = 1;
+                        while (true) {
+                            const nr = r + dr * dist;
+                            const nc = c + dc * dist;
+                            if (!isValid(nr, nc)) break;
+                            if (state.boardData[nr][nc] === 0) {
+                                moves.push({ r: nr, c: nc, isJump: false });
+                            } else break;
+                            dist++;
+                        }
+                    } else {
+                        const canMoveDir = isP1 ? dr === -1 : dr === 1;
+                        if (canMoveDir) {
+                            const nr = r + dr;
+                            const nc = c + dc;
+                            if (isValid(nr, nc) && state.boardData[nr][nc] === 0) {
+                                moves.push({ r: nr, c: nc, isJump: false });
+                            }
+                        }
+                    }
+                }
+
+                if (isKing) {
+                    let dist = 1;
+                    let foundEnemy = false;
+                    let enemyPos = null;
+                    while (true) {
+                        const nr = r + dr * dist;
+                        const nc = c + dc * dist;
+                        if (!isValid(nr, nc)) break;
+                        const cell = state.boardData[nr][nc];
+                        if (cell === 0) {
+                            if (foundEnemy) {
+                                moves.push({ r: nr, c: nc, isJump: true, captured: enemyPos });
+                            }
+                        } else if (cell === opponent1 || cell === opponent2) {
+                            if (foundEnemy) break;
+                            foundEnemy = true;
+                            enemyPos = { r: nr, c: nc };
+                        } else break;
+                        dist++;
+                    }
+                } else {
+                    const jr = r + dr * 2;
+                    const jc = c + dc * 2;
+                    const mr = r + dr;
+                    const mc = c + dc;
+                    if (isValid(jr, jc) && isValid(mr, mc)) {
+                        const mid = state.boardData[mr][mc];
+                        if (state.boardData[jr][jc] === 0 && (mid === opponent1 || mid === opponent2)) {
+                            moves.push({ r: jr, c: jc, isJump: true, captured: { r: mr, c: mc } });
+                        }
+                    }
+                }
+            }
+
+            return moves;
+        }
+
+        function executeMove(tr, tc) {
+            const move = state.validMoves.find(m => m.r === tr && m.c === tc);
+            if (!move) return;
+
+            state.lastLocalInteraction = Date.now();
+            state.timeoutTriggered = false;
+
+            // Trigger local animation
+            state.lastLanded = { r: tr, c: tc };
+
+            const { r, c } = state.selectedPiece;
+            let pVal = state.boardData[r][c];
+
+            state.boardData[tr][tc] = pVal;
+            state.boardData[r][c] = 0;
+
+            let justJumped = false;
+            if (move.isJump) {
+                state.boardData[move.captured.r][move.captured.c] = 0;
+                justJumped = true;
+            }
+
+            let promoted = false;
+            if (pVal === 1 && tr === 0) { state.boardData[tr][tc] = 3; pVal = 3; promoted = true; }
+            if (pVal === 2 && tr === 7) { state.boardData[tr][tc] = 4; pVal = 4; promoted = true; }
+
+            let moreJumpsAvailable = false;
+            if (justJumped && !promoted) {
+                const tempMoves = getAvailableMoves(tr, tc, pVal);
+                if (tempMoves.some(m => m.isJump)) {
+                    moreJumpsAvailable = true;
+                }
+            }
+
+            let updates;
+            if (moreJumpsAvailable) {
+                updates = {
+                    board: state.boardData,
+                    mustJumpFrom: { r: tr, c: tc },
+                    lastMoveTime: firebase.database.ServerValue.TIMESTAMP,
+                    timeout: null
+                };
+                state.selectedPiece = { r: tr, c: tc };
+                state.mustJumpFrom = { r: tr, c: tc };
+                state.validMoves = [];
+                renderBoard();
+                selectPiece(tr, tc);
+            } else {
+                const nextTurn = state.turn === 1 ? 2 : 1;
+                updates = {
+                    board: state.boardData,
+                    turn: nextTurn,
+                    mustJumpFrom: null,
+                    lastMoveTime: firebase.database.ServerValue.TIMESTAMP,
+                    timeout: null
+                };
+                state.selectedPiece = null;
+                state.validMoves = [];
+                state.turn = nextTurn;
+                renderBoard();
+                updateStatusText();
+            }
+
+            db.ref('rooms/' + state.currentRoomId).update(updates);
+        }
+
+        function updateStatusText() {
+            const txt = DOM['turn-text'];
+            if (!txt) return;
+            
+            let nameToShow = state.turn === 1 ? state.p1Name : state.p2Name;
+            if (!nameToShow) nameToShow = state.turn === 1 ? "P1" : "P2";
+
+            txt.textContent = state.turn === state.myPlayerNumber ? "YOUR TURN" : nameToShow + "'S TURN";
+            txt.style.color = state.turn === 1 ? "#03e9f4" : "#ff00cc";
+        }
+
+        function startTimerLogic(lastMoveTimestamp) {
+            if (state.timerRAF) cancelAnimationFrame(state.timerRAF);
+            state.lastMoveTime = lastMoveTimestamp;
+            state.timeoutTriggered = false;
+            
+            const timerEl = DOM['timer-box'];
+            let lastSecond = -1;
+
+            function tick() {
+                if (!state.gameActive) return;
+
+                const estimatedServerTime = Date.now() + state.serverTimeOffset;
+                const elapsed = estimatedServerTime - state.lastMoveTime;
+                let remaining = Math.ceil((TIME_LIMIT - elapsed) / 1000);
+                if (remaining < 0) remaining = 0;
+
+                if (remaining !== lastSecond) {
+                    lastSecond = remaining;
+                    timerEl.textContent = remaining;
+                    
+                    if (remaining <= 5) {
+                        timerEl.classList.add('timer-warning');
+                    } else {
+                        timerEl.classList.remove('timer-warning');
+                    }
+                }
+
+                if (remaining === 0 && state.gameActive && !state.timeoutTriggered && (Date.now() - state.localStartTime > 5000)) {
+                    state.timeoutTriggered = true;
+                    
+                    const loserNum = state.turn;
+                    const winnerName = loserNum === 1 ? state.p2Name : state.p1Name;
+                    
+                    console.log("Timer expired! Turn:", state.turn, "Winner:", winnerName);
+                    
+                    db.ref('rooms/' + state.currentRoomId).transaction(currentData => {
+                        if (currentData && !currentData.winner && !currentData.timeout) {
+                            currentData.timeout = loserNum;
+                            currentData.winner = winnerName;
+                            currentData.method = 'timeout';
+                        }
+                        return currentData;
+                    });
+                    
+                    return;
+                }
+
+                state.timerRAF = requestAnimationFrame(tick);
+            }
+
+            state.timerRAF = requestAnimationFrame(tick);
+        }
+
+        function startGameSetup() {
+            DOM['page-host'].classList.add('hidden');
+            DOM['page-join'].classList.add('hidden');
+            DOM['page-game'].classList.remove('hidden');
+            DOM['page-game'].classList.add('fade-in');
+
+            const boardEl = DOM['board'];
+            if (state.myPlayerNumber === 2) {
+                boardEl.classList.add('flipped');
+            } else {
+                boardEl.classList.remove('flipped');
+            }
+
+            initBoardDOM();
+
+            DOM['chat-ui'].classList.remove('hidden');
+            DOM['surrender-ui'].classList.remove('hidden');
+
+            // Apply theme based on player number
+            if (state.myPlayerNumber === 2) {
+                DOM['chat-btn'].classList.add('pink-theme');
+                DOM['surrender-btn'].classList.add('pink-theme');
+                DOM['chat-page-header'].classList.add('pink-theme');
+                DOM['chat-page-title'].classList.add('pink-theme');
+                DOM['chat-back-btn'].classList.add('pink-theme');
+                DOM['chat-input-area'].classList.add('pink-theme');
+                DOM['chat-send-btn'].classList.add('pink-theme');
+            }
+
+            state.gameActive = true;
+            state.winnerShown = false;
+            state.gameStarted = true;
+            state.timeoutTriggered = false;
+            state.localStartTime = Date.now();
+
+            startPresence();
+            db.ref('rooms/' + state.currentRoomId).on('value', handleGameUpdate);
+            initChatSystem();
+        }
+
+        function handleGameUpdate(snapshot) {
+            const data = snapshot.val();
+            if (!data) return;
+
+            // Handle rematch restart
+            if (data.status === 'playing' && !data.winner) {
+                if (!state.gameActive || state.winnerShown) {
+                    DOM['page-winner'].classList.add('hidden');
+                    DOM['winner-border-fx'].classList.add('hidden');
+                    DOM['rematch-modal'].classList.remove('active');
+                    DOM['page-game'].classList.remove('hidden');
+                    DOM['chat-ui'].classList.remove('hidden');
+                    DOM['surrender-ui'].classList.remove('hidden');
+
+                    clearChatMessages();
+                    DOM['bg-neon'].classList.remove('paused');
+
+                    const rematchBtn = DOM['rematch-btn'];
+                    rematchBtn.textContent = "REMATCH";
+                    rematchBtn.disabled = false;
+
+                    state.gameActive = true;
+                    state.winnerShown = false;
+                    state.gameStarted = true;
+                    state.selectedPiece = null;
+                    state.validMoves = [];
+                    state.timeoutTriggered = false;
+                    state.localStartTime = Date.now();
+                    state.lastLanded = null;
+
+                    startPresence();
+                }
+            }
+
+            // Handle rematch request
+            if (data.rematch && !state.gameActive) {
+                handleRematchLogic(data.rematch);
+            }
+
+            // Winner detected
+            if (data.winner) {
+                state.gameActive = false;
+                stopPresence();
+                if (state.timerRAF) cancelAnimationFrame(state.timerRAF);
+
+                if (!state.winnerShown) {
+                    state.winnerShown = true;
+                    const winnerNum = data.winner === data.p1 ? 1 : 2;
+                    
+                    // Add win to leaderboard
+                    addWinToLeaderboard(data.winner);
+                    
+                    showWinnerScreen(winnerNum, data);
+                }
+                
+                if (data.rematch) {
+                    handleRematchLogic(data.rematch);
+                }
+                return;
+            }
+
+            if (!state.gameActive) return;
+
+            // Check surrender
+            if (data.surrender) {
+                const winnerNum = data.surrender === 1 ? 2 : 1;
+                const winnerName = winnerNum === 1 ? data.p1 : data.p2;
+                db.ref('rooms/' + state.currentRoomId).update({ winner: winnerName, method: 'surrender' });
+                return;
+            }
+
+            // Check opponent presence
+            if (state.gameStarted && (Date.now() - state.localStartTime > 5000) && checkOpponentPresence(data)) {
+                const winnerName = state.myPlayerNumber === 1 ? data.p1 : data.p2;
+                db.ref('rooms/' + state.currentRoomId).update({ winner: winnerName, method: 'disconnect' });
+                return;
+            }
+
+            // Check piece count
+            if (data.status === 'playing' && data.board && state.gameStarted) {
+                let p1c = 0, p2c = 0;
+                for (let r = 0; r < 8; r++) {
+                    for (let c = 0; c < 8; c++) {
+                        const p = data.board[r]?.[c] || 0;
+                        if (p === 1 || p === 3) p1c++;
+                        if (p === 2 || p === 4) p2c++;
+                    }
+                }
+                
+                if (p1c === 0 && p2c > 0) {
+                    db.ref('rooms/' + state.currentRoomId).update({ winner: data.p2, method: 'capture' });
+                    return;
+                }
+                if (p2c === 0 && p1c > 0) {
+                    db.ref('rooms/' + state.currentRoomId).update({ winner: data.p1, method: 'capture' });
+                    return;
+                }
+            }
+
+            state.p1Name = data.p1 || "P1";
+            state.p2Name = data.p2 || "P2";
+
+            if (data.lastMoveTime) {
+                startTimerLogic(data.lastMoveTime);
+            }
+
+            if (Date.now() - state.lastLocalInteraction < 400) return;
+
+            const newHash = hashBoard(data.board);
+            state.mustJumpFrom = data.mustJumpFrom || null;
+
+            if (newHash !== state.lastBoardHash || state.turn !== data.turn) {
+                // Detect opponent move for animation
+                if (state.boardData && data.board) {
+                    for (let r = 0; r < 8; r++) {
+                        for (let c = 0; c < 8; c++) {
+                            // If a piece exists here now but didn't before, it landed here
+                            if (state.boardData[r][c] === 0 && data.board[r][c] !== 0) {
+                                state.lastLanded = { r, c };
+                            }
+                        }
+                    }
+                }
+
+                state.lastBoardHash = newHash;
+                state.boardData = data.board;
+                state.turn = data.turn;
+                state.lastTurn = data.turn;
+                state.timeoutTriggered = false;
+                
+                if (state.turn !== state.myPlayerNumber) {
+                    state.selectedPiece = null;
+                    state.validMoves = [];
+                }
+                
+                renderBoard();
+                updateStatusText();
+            }
+        }
+
+        function showWinnerScreen(winnerNum, data) {
+            state.gameActive = false;
+            stopPresence();
+            
+            // Close chat if open
+            if (state.isChatOpen) {
+                toggleChat();
+            }
+            
+            DOM['page-game'].classList.add('hidden');
+            DOM['surrender-ui'].classList.add('hidden');
+            DOM['chat-ui'].classList.add('hidden');
+
+            DOM['page-winner'].classList.remove('hidden');
+            DOM['page-winner'].classList.add('fade-in');
+            DOM['winner-border-fx'].classList.remove('hidden');
+
+            DOM['bg-neon'].classList.add('paused');
+
+            let timeDisplay = "";
+            if (data.startTime) {
+                const d = new Date(data.startTime);
+                let hours = d.getHours();
+                const ampm = hours >= 12 ? 'PM' : 'AM';
+                hours = hours % 12 || 12;
+                const minutes = d.getMinutes().toString().padStart(2, '0');
+                const day = d.getDate().toString().padStart(2, '0');
+                const month = (d.getMonth() + 1).toString().padStart(2, '0');
+                const year = d.getFullYear();
+                timeDisplay = `${hours}:${minutes} ${ampm} - ${day}/${month}/${year}`;
+            }
+            DOM['game-start-time'].textContent = timeDisplay;
+
+            const winName = winnerNum === 1 ? data.p1 : data.p2;
+            const loseName = winnerNum === 1 ? data.p2 : data.p1;
+
+            DOM['winner-name'].textContent = winName;
+            DOM['loser-name'].textContent = loseName;
+            DOM['end-room-id'].textContent = state.currentRoomId;
+        }
+
+        function triggerRematchUI() {
+            const btn = DOM['rematch-btn'];
+            btn.textContent = "WAITING...";
+            btn.disabled = true;
+            db.ref('rooms/' + state.currentRoomId + '/rematch').update({
+                sender: state.myPlayerNumber,
+                state: 'pending'
+            });
+        }
+
+        function handleRematchLogic(rematchData) {
+            const modal = DOM['rematch-modal'];
+            const statusText = DOM['rematch-status-text'];
+
+            if (rematchData.state === 'pending') {
+                if (rematchData.sender !== state.myPlayerNumber) {
+                    modal.classList.add('active');
+                    statusText.textContent = "Opponent wants a rematch!";
+                } else {
+                    DOM['rematch-btn'].textContent = "WAITING...";
+                }
+            } else if (rematchData.state === 'declined') {
+                modal.classList.remove('active');
+                const btn = DOM['rematch-btn'];
+                btn.textContent = "DECLINED";
+                setTimeout(() => {
+                    btn.textContent = "REMATCH";
+                    btn.disabled = false;
+                }, 2000);
+            }
+        }
+
+        function acceptRematch() {
+            resetGame();
+            DOM['rematch-modal'].classList.remove('active');
+        }
+
+        function declineRematch() {
+            db.ref('rooms/' + state.currentRoomId + '/rematch').update({ state: 'declined' });
+            DOM['rematch-modal'].classList.remove('active');
+        }
+
+        function resetGame() {
+            DOM['bg-neon'].classList.remove('paused');
+            
+            const serverTime = Date.now() + state.serverTimeOffset;
+            
+            db.ref('rooms/' + state.currentRoomId).update({
+                board: getInitialBoard(),
+                turn: 1,
+                winner: null,
+                surrender: null,
+                rematch: null,
+                chat: null,
+                status: 'playing',
+                lastMoveTime: firebase.database.ServerValue.TIMESTAMP,
+                startTime: Date.now(),
+                mustJumpFrom: null,
+                timeout: null,
+                p1_presence: state.myPlayerNumber === 1 ? serverTime : null,
+                p2_presence: state.myPlayerNumber === 2 ? serverTime : null
+            });
+        }
+
+        function triggerSurrender() {
+            if (!state.gameActive) return;
+            if (confirm("Are you sure you want to surrender?")) {
+                db.ref('rooms/' + state.currentRoomId).update({ surrender: state.myPlayerNumber });
+            }
+        }
+
+        let chatListenerAdded = false;
+        
+        function initChatSystem() {
+            if (chatListenerAdded) return;
+            chatListenerAdded = true;
+
+            db.ref('rooms/' + state.currentRoomId + '/chat').orderByChild('timestamp').on('child_added', snapshot => {
+                const msg = snapshot.val();
+                addMessageToChat(msg);
+
+                if (msg.sender !== state.currentUser && !state.isChatOpen) {
+                    state.unreadCount++;
+                    const dot = DOM['notif-dot'];
+                    dot.style.display = 'flex';
+                    dot.textContent = state.unreadCount > 9 ? '9+' : state.unreadCount;
+                    
+                    const btn = DOM['chat-btn'];
+                    btn.classList.remove('notify-anim');
+                    btn.offsetWidth;
+                    btn.classList.add('notify-anim');
+                }
+            });
+
+            DOM['chat-input'].addEventListener("keypress", e => {
+                if (e.key === "Enter") sendMessage();
+            });
+
+            // Handle keyboard visibility using visualViewport API
+            setupKeyboardHandling();
+
+            const chatMessages = DOM['chat-messages'];
+            chatMessages.addEventListener('touchstart', function(e) {
+                e.stopPropagation();
+            }, { passive: true });
+            
+            chatMessages.addEventListener('touchmove', function(e) {
+                e.stopPropagation();
+            }, { passive: true });
+        }
+
+        function setupKeyboardHandling() {
+            const chatPage = DOM['chat-page'];
+            const chatInput = DOM['chat-input'];
+            const chatMessages = DOM['chat-messages'];
+            
+            // Store initial height
+            state.initialViewportHeight = window.innerHeight;
+
+            // Use visualViewport API for better keyboard detection
+            if (window.visualViewport) {
+                let lastHeight = window.visualViewport.height;
+                
+                window.visualViewport.addEventListener('resize', () => {
+                    if (!state.isChatOpen) return;
+                    
+                    const currentHeight = window.visualViewport.height;
+                    const heightDiff = state.initialViewportHeight - currentHeight;
+                    
+                    // Keyboard is likely open if height decreased significantly
+                    if (heightDiff > 100) {
+                        state.keyboardVisible = true;
+                        chatPage.classList.add('keyboard-open');
+                        
+                        // Adjust chat page height to visible viewport
+                        chatPage.style.height = currentHeight + 'px';
+                        
+                        // Scroll to bottom after keyboard opens
+                        setTimeout(() => {
+                            chatMessages.scrollTop = chatMessages.scrollHeight;
+                        }, 100);
+                    } else {
+                        state.keyboardVisible = false;
+                        chatPage.classList.remove('keyboard-open');
+                        chatPage.style.height = '100%';
+                    }
+                    
+                    lastHeight = currentHeight;
+                });
+
+                window.visualViewport.addEventListener('scroll', () => {
+                    if (!state.isChatOpen || !state.keyboardVisible) return;
+                    
+                    // Keep the chat page positioned correctly
+                    chatPage.style.top = window.visualViewport.offsetTop + 'px';
+                });
+            }
+
+            // Fallback for browsers without visualViewport
+            chatInput.addEventListener('focus', () => {
+                if (!window.visualViewport) {
+                    state.keyboardVisible = true;
+                    chatPage.classList.add('keyboard-open');
+                    
+                    // Scroll to bottom when input is focused
+                    setTimeout(() => {
+                        chatMessages.scrollTop = chatMessages.scrollHeight;
+                    }, 300);
+                }
+            });
+
+            chatInput.addEventListener('blur', () => {
+                if (!window.visualViewport) {
+                    state.keyboardVisible = false;
+                    chatPage.classList.remove('keyboard-open');
+                    chatPage.style.height = '100%';
+                }
+            });
+        }
+
+        function addMessageToChat(msg) {
+            const msgsDiv = DOM['chat-messages'];
+            const emptyMsg = DOM['chat-empty'];
+            
+            if (emptyMsg) {
+                emptyMsg.style.display = 'none';
+            }
+            
+            const isMine = msg.sender === state.currentUser;
+            
+            // Container
+            const container = document.createElement('div');
+            container.className = 'msg-container ' + (isMine ? 'mine' : 'theirs');
+
+            // Name Label (Only for opponent)
+            if (!isMine) {
+                const label = document.createElement('div');
+                label.className = 'msg-label';
+                label.textContent = msg.sender;
+                container.appendChild(label);
+            }
+
+            // Bubble
+            const bubble = document.createElement('div');
+            bubble.className = 'msg-bubble ' + (isMine ? 'mine' : 'theirs');
+
+            // Text Content
+            const textSpan = document.createElement('div');
+            textSpan.className = 'msg-text-content';
+            textSpan.textContent = msg.text;
+            bubble.appendChild(textSpan);
+
+            // Timestamp
+            const timeSpan = document.createElement('div');
+            timeSpan.className = 'msg-timestamp';
+            const date = new Date(msg.timestamp);
+            const hours = date.getHours().toString().padStart(2, '0');
+            const mins = date.getMinutes().toString().padStart(2, '0');
+            timeSpan.textContent = `${hours}:${mins}`;
+            bubble.appendChild(timeSpan);
+            
+            container.appendChild(bubble);
+            msgsDiv.appendChild(container);
+            
+            state.messageCount++;
+            msgsDiv.scrollTop = msgsDiv.scrollHeight;
+        }
+
+        function clearChatMessages() {
+            const msgsDiv = DOM['chat-messages'];
+            
+            while (msgsDiv.firstChild) {
+                msgsDiv.removeChild(msgsDiv.firstChild);
+            }
+            
+            const emptyDiv = document.createElement('div');
+            emptyDiv.className = 'chat-empty-fullscreen';
+            emptyDiv.id = 'chat-empty';
+            emptyDiv.innerHTML = '<div class="chat-empty-icon">💬</div><div class="chat-empty-text">No messages yet...<br>Start the conversation!</div>';
+            msgsDiv.appendChild(emptyDiv);
+            
+            DOM['chat-empty'] = emptyDiv;
+            
+            state.messageCount = 0;
+            state.unreadCount = 0;
+            DOM['notif-dot'].style.display = 'none';
+        }
+
+        function toggleChat() {
+            const chatPage = DOM['chat-page'];
+            state.isChatOpen = !state.isChatOpen;
+            
+            if (state.isChatOpen) {
+                // Reset height before showing
+                chatPage.style.height = '100%';
+                chatPage.style.top = '0';
+                chatPage.style.display = 'flex';
+                
+                // Force reflow then add active class for animation
+                chatPage.offsetWidth;
+                chatPage.classList.add('active');
+                
+                state.unreadCount = 0;
+                DOM['notif-dot'].style.display = 'none';
+                
+                setTimeout(() => {
+                    DOM['chat-messages'].scrollTop = DOM['chat-messages'].scrollHeight;
+                }, 100);
+            } else {
+                // Blur input first to hide keyboard
+                DOM['chat-input'].blur();
+                
+                chatPage.classList.remove('active');
+                chatPage.classList.remove('keyboard-open');
+                state.keyboardVisible = false;
+                
+                // Wait for animation to complete before hiding
+                setTimeout(() => {
+                    if (!state.isChatOpen) {
+                        chatPage.style.display = 'none';
+                        chatPage.style.height = '100%';
+                        chatPage.style.top = '0';
+                    }
+                }, 300);
+            }
+        }
+
+        function sendMessage() {
+            const input = DOM['chat-input'];
+            const text = input.value.trim();
+            if (!text) return;
+            
+            db.ref('rooms/' + state.currentRoomId + '/chat').push({
+                sender: state.currentUser,
+                playerNum: state.myPlayerNumber,
+                text: text,
+                timestamp: Date.now()
+            });
+            input.value = "";
+            input.focus();
+            
+            // Scroll to bottom after sending
+            setTimeout(() => {
+                DOM['chat-messages'].scrollTop = DOM['chat-messages'].scrollHeight;
+            }, 100);
+        }
+
+        function copyId() {
+            navigator.clipboard.writeText(DOM['room-id-box'].textContent);
+            DOM['copy-status'].textContent = "Copied!";
+        }
+
+        function setupTouchHandlers() {
+            document.addEventListener('gesturestart', e => e.preventDefault(), { passive: false });
+            
+            document.addEventListener('touchmove', e => {
+                if (e.target.closest('.chat-messages-fullscreen')) return;
+                if (e.target.closest('.leaderboard-container')) return;
+                if (e.scale !== 1) e.preventDefault();
+            }, { passive: false });
+
+            let lastTouchEnd = 0;
+            document.addEventListener('touchend', e => {
+                const now = Date.now();
+                if (now - lastTouchEnd <= 300) e.preventDefault();
+                lastTouchEnd = now;
+            }, false);
+        }
+
+        function setupCleanup() {
+            window.addEventListener('beforeunload', () => {
+                stopPresence();
+            });
+            
+            window.addEventListener('pagehide', () => {
+                stopPresence();
+            });
+            
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible' && state.gameActive) {
+                    updatePresence();
+                }
+            });
+        }
+
+        function init() {
+            cacheDom();
+            initFirebase();
+            setupTouchHandlers();
+            setupCleanup();
+
+            DOM['main-container'].style.minHeight = window.innerHeight + 'px';
+            state.initialViewportHeight = window.innerHeight;
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+
+        return {
+            goToPage2,
+            goToHostPage,
+            goToJoinPage,
+            connectToRoom,
+            goBackToSelection,
+            copyId,
+            toggleChat,
+            sendMessage,
+            triggerSurrender,
+            triggerRematchUI,
+            acceptRematch,
+            declineRematch
+        };
+    })();
+    </script>
+</body>
+</html>
