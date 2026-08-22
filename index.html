@@ -3531,7 +3531,7 @@
 <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js';
     import { getDatabase, ref, set, get, remove, onValue, off, update, push, onDisconnect, serverTimestamp, runTransaction } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js';
-    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js';
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js';
 
     const firebaseConfig = {
         apiKey: "AIzaSyBwetqMhJUVuErt9AgYsQdXIxzipF6OAlw",
@@ -3568,9 +3568,27 @@
         try {
             await signInWithPopup(auth, googleProvider);
         } catch (err) {
-            if (errorEl) errorEl.textContent = 'Sign-in failed. Please try again.';
+            const popupFallbackCodes = [
+                'auth/popup-blocked',
+                'auth/operation-not-supported-in-this-environment',
+                'auth/unauthorized-domain'
+            ];
+            if (popupFallbackCodes.includes(err.code)) {
+                try {
+                    await signInWithRedirect(auth, googleProvider);
+                } catch (redirectErr) {
+                    if (errorEl) errorEl.textContent = 'Sign-in failed: ' + (redirectErr.message || redirectErr.code || redirectErr);
+                }
+            } else {
+                if (errorEl) errorEl.textContent = 'Sign-in failed: ' + (err.message || err.code || err);
+            }
         }
     };
+
+    getRedirectResult(auth).catch((err) => {
+        const errorEl = document.getElementById('google-signin-error');
+        if (errorEl) errorEl.textContent = 'Sign-in failed: ' + (err.message || err.code || err);
+    });
 
     onAuthStateChanged(auth, (user) => {
         const googleSigninScreen = document.getElementById('google-signin-screen');
